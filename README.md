@@ -5,14 +5,16 @@ This markdown file explains how the RESTful API I built for my Computer Science 
 The API was made to take requests to use CRUD operations on the game's NoSQL database (which can be accessed by both the website and the actual game).
 Before requests were made to a MongoDB Atlas server, however I chose to create my own API and use a local database.
 
+
 ## Create
 ### Create [GAME]
   The `POST` HTTP method is used to create a new resource. The `POST` method is used when a new resource is to be made.
   The GameID is passed into the URL as an endpoint:  
-  `https://www.domain.name.com/NEA_API/[version]/{GameID}`  
+  `https://www.domain.name.com/NEA_API/[version]/{GameID}/{user}`  
   Where:  
-  `[version]` is the version of the API that is to be used. Currently, the newest version is `v1`, and  
-  `{GameID}` is the ID of the game that should be passed into the URL.  
+  `[version]` is the version of the API that is to be used. Currently, the newest version is `v1`,  
+  `{GameID}` is the ID of the game that should be passed into the URL, and
+  `{user}` is the username that will own the game.
   
   When creating the database for a new game, the API will automatically create all the necessary collections (stats/settings) and documents (score/wave/user/difficulty/lives).
   If the operation was successful, the API will return a JSON message:  
@@ -267,5 +269,5 @@ This will be attached with a HTTP 200 status (OK).
 
 If the operation was unsuccessful (HTTP 400 - Bad Request):
 ```json
-{ result: true, reason: "GameID needs to be an integer.", error: null, data: null }
+{ result: false, reason: "GameID needs to be an integer.", error: null, data: null }
 ```

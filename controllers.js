@@ -1,21 +1,12 @@
 const fs = require("fs");
+const CryptoJS = require("crypto-js");
 
 exports.postUserData = (req, res) => {
   const [usr, pwd] = [req.params.user, req.params.pwd];
-
-  // Trying to make the collection for the user using mkdirSync().
-  // Also wrapping the function around a try-catch so that the server code doesnt stop execute and we can send the client
-  // an error message.
-
+  const hashed = String(CryptoJS.SHA512(pwd));
   try { fs.mkdirSync(`./database/users/${usr}`); } catch(e) { res.status(500); res.json({ result: false, reason: "Unable to create collection folder for new user.", error: e.message, data: null }); }
-  
-  // Here, we are creating the info.json document with the username and password that was sent in the URL request.
-  // Instead of a try-catch, we use a callback function. This function is one that gets executed after fs.writeFile() finishes.
-  // It is equivalent to a try-catch.
-  fs.writeFile(`./database/users/${usr}/info.json`, JSON.stringify({ username: usr, password: pwd }), function(err) { 
-    // Checking if there is an error. If so, we send an error message to the client along with a HTTP 500 status.
+  fs.writeFile(`./database/users/${usr}/info.json`, JSON.stringify({ username: usr, password: hashed }), function(err) { 
     if(err) { res.status(500); res.json({ result: false, reason: "Unable to create document for new user.", error: err, data: null }); }
-    // Else, we can assume that the document was created and written to successfully, and so we send a HTTP 200 (OK) success status.
     else { res.status(200); res.json({ result: true, reason: null, error: null, data: null }); }
   });
 }
@@ -23,10 +14,8 @@ exports.postUserData = (req, res) => {
 exports.postGameData = (req, res) => {
   function fileErr(e, res, GameID) { res.status(500); res.json({ result: false, reason: "Could not make database for game.", error: e.message, data: null }); console.log(e); }
   const GameID = req.params.GameID;
-  if(Number.isInteger(parseInt(GameID))) { // GameID must be an integer, so checking if it is.
+  if(Number.isInteger(parseInt(GameID))) {
     try {
-      // Creating the two required collections and all the required documents for the database.
-      // First, each key-value pair for all documents are initialized to `0` (if the value is an int) or "" (if the value is a string)
       fs.mkdirSync(`./database/${GameID}/stats`, { recursive: true });
       fs.writeFile(`./database/${GameID}/stats/score.json`, JSON.stringify({value: 0}), function(err) { if(err) if(err) fileErr(err, res, GameID) });
       fs.writeFile(`./database/${GameID}/stats/wave.json`, JSON.stringify({value: 0}), function(err) { if(err) if(err) fileErr(err, res, GameID) });
@@ -37,12 +26,10 @@ exports.postGameData = (req, res) => {
 
       fs.writeFile(`./database/${GameID}/settings/lives.json`, JSON.stringify({LivesRemaining: 0, TotalLives: 0}), function(err) { if(err) fileErr(err, res, GameID) });
       fs.writeFile(`./database/${GameID}/settings/user.json`, JSON.stringify({user: req.params.user}), function(err) { if(err) fileErr(err, res, GameID) });
-      
-      // Responding to the client with success.
+
       res.status(200);
       res.json({ result: true, reason: "Game's database has been made, use PUT method to update it.", error: null, data: null });
     } catch(e) {
-      // Responding to the client with an internal server error.
       res.status(500);
       res.json({ result: false, reason: "Could not make database for game.", err: e.message, data: null });
     }
@@ -51,20 +38,16 @@ exports.postGameData = (req, res) => {
 }
 
 exports.getLoginInfo = (req, res) => {
-  const [usr, pwd] = [req.params.user, req.params.pwd];
+  const [usr, pwd] = [req.params.user, String(CryptoJS.SHA512(req.params.pwd))];
   let data;
-  // Checking if the collection for the requested username exists, i.e. does the user have an account?
-  if(fs.existsSync(`./database/users/${usr}/`)) { // If true
-    try {
-      // Get the data of the document in the collection and compare the database password with the one received in the request.
-      // If the two passwords are the same, the server sends back a success message.
+  if(fs.existsSync(`./database/users/${usr}/`)) {
+    console.log("acc exists")
+    try { 
       data = JSON.parse(fs.readFileSync(`./database/users/${usr}/info.json`, "utf8"));
       if(data.password == pwd) { res.status(200); res.json({ result: true, reason: "Login successful.", error: null, data: null }); }
-      else { res.status(401); res.json({ result: false, reason: "Password incorrect.", error: null, data: null }); }
+      else { console.log("!hihi"); res.status(401); res.json({ result: false, reason: "Password incorrect.", error: null, data: null }); }
     } catch(e) { console.log(e); res.status(500); res.json({ result: false, reason: "Error while reading JSON file for user.", error: e.message, data: null }); }
-
-    
-  } else { res.json({ result: false, reason: "Username incorrect." }) }
+  } else { rest.status(401); res.json({ result: false, reason: "Username incorrect." }) }
 }
 
 exports.getGameData = (req, res) => {
@@ -99,7 +82,7 @@ exports.getGameData = (req, res) => {
 exports.getAllGames = (req, res) => {
   fs.readdir('./database', { withFileTypes: true }, (error, files) => {
     if (error) throw error;
-    const games = files
+    let games = files
       .filter((item) => item.isDirectory())
       .map((item) => item.name);
 
@@ -112,15 +95,14 @@ exports.getAllGames = (req, res) => {
         AllGames.push({ GameID: games[i], score: score, difficulty: difficulty, usrn: user });
       }
     }
-    res.json({ result: true, reason: "eh", error: null, data: AllGames });
+    games.pop(); // Removing the "users" element from the end as we only want game IDs.
+    res.json({ result: true, reason: "eh", error: null, data: { IDs: games, info: AllGames } });
   });  
 }
 
 exports.doesGameExist = (req, res) => {
   const GameID = req.params.GameID;
-  if(Number.isInteger(parseInt(GameID))) {
-    listDBs(req, res);
-  } else if(!fs.existsSync(`./database/${GameID}`)) {
+  if(!fs.existsSync(`./database/${GameID}`)) {
     res.status(200);
     res.json({ DoesGameExist: false });
     return;
