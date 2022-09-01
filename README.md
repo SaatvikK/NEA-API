@@ -1,6 +1,6 @@
 # NEA Space Invaders API Documentation
 ## About
-This markdown file explains how the RESTful API I built for my Computer Science NEA works.
+This markdown file explains how the RESTful API I built for my Computer Science NEA (Non-Examined Assessment) works. The rest of my NEA can be found here: https://github.com/SaatvikK/Space-Invaders
 
 The API was made to take requests to use CRUD operations on the game's NoSQL database (which can be accessed by both the website and the actual game).
 Before requests were made to a MongoDB Atlas server, however I chose to create my own API and use a local database.
